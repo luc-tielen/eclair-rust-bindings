@@ -46,18 +46,18 @@ impl Program {
         unsafe { bindings::eclair_fact_count(self.handle, fact_type) }
     }
 
-    pub fn add_facts(&mut self, fact_type: u32, buf: Buffer, count: usize) {
+    pub fn add_facts(&mut self, fact_type: u32, fact_buf: *mut u32, count: usize) {
         // SAFETY: We rely on Eclair for safety of calling this function.
         // We also rely on the calling code to correctly pass in a valid fact
-        // type for this Eclair program.
-        unsafe { bindings::eclair_add_facts(self.handle, fact_type, buf.ptr, count) }
+        // type and buffer pointer for this Eclair program.
+        unsafe { bindings::eclair_add_facts(self.handle, fact_type, fact_buf, count) }
     }
 
-    pub fn add_fact(&mut self, fact_type: u32, buf: Buffer) {
+    pub fn add_fact(&mut self, fact_type: u32, fact_buf: *mut u32) {
         // SAFETY: We rely on Eclair for safety of calling this function.
         // We also rely on the calling code to correctly pass in a valid fact
-        // type for this Eclair program.
-        unsafe { bindings::eclair_add_fact(self.handle, fact_type, buf.ptr) }
+        // type and buffer pointer for this Eclair program.
+        unsafe { bindings::eclair_add_fact(self.handle, fact_type, fact_buf) }
     }
 
     pub fn encode_string(&mut self, s: &str) -> StringIndex {
@@ -88,10 +88,11 @@ impl Program {
     }
 }
 
-pub struct StringIndex(u32);
+pub struct StringIndex(pub(crate) u32);
 
+// TODO rename, only use to get facts (no need to drop buffer when adding facts)!
 pub struct Buffer {
-    ptr: *const bindings::Buffer,
+    pub(crate) ptr: *mut u32,
 }
 
 impl Drop for Buffer {
