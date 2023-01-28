@@ -9,17 +9,19 @@ pub struct Program<T> {
     _marker: PhantomData<T>,
 }
 
-pub trait Fact {
-    // TODO can this be cleaned up? or hide via proc macro?
-    fn fact_name(_marker: PhantomData<Self>) -> &'static str;
-    fn column_count(_marker: PhantomData<Self>) -> u32;
+// Structs used to indicate fact direction at the type level
+pub struct Input;
+pub struct Output;
+pub struct InputOutput;
+
+pub trait Fact<Prog> {
+    type DIRECTION: Direction;
+    const COLUMN_COUNT: u32;
+    const FACT_NAME: &'static str;
 }
 
-pub trait InputFact<Prog> {}
-pub trait OutputFact<Prog> {}
-
-impl<T> Program<T> {
-    pub fn new(_handle: T) -> Self {
+impl<P> Program<P> {
+    pub fn new(_handle: P) -> Self {
         Self {
             prog: internal::Program::new(),
             _marker: PhantomData,
@@ -33,39 +35,45 @@ impl<T> Program<T> {
     // NOTE: for now mut is needed since we need to potentially
     // mutate the runtime (by encoding a Eclair string)
     // TODO: create a "try_lookup_string" in Eclair that does no mutation
-    pub fn get_facts<FactType: Fact>(&mut self) -> ReadBufferIterator<FactType>
+    pub fn get_facts<FactType>(&mut self) -> ReadBufferIterator<FactType>
     where
-        FactType: OutputFact<T>,
+        PhantomData<FactType>: Fact<P>,
+        <PhantomData<FactType> as Fact<P>>::DIRECTION: IsOutput,
     {
-        let name = Fact::fact_name(PhantomData::<FactType>);
+        let name = <PhantomData<FactType> as Fact<P>>::FACT_NAME;
         let fact_type_idx = self.prog.encode_string(name).0;
         ReadBufferIterator::new(&self.prog, fact_type_idx)
     }
 
-    pub fn add_fact<FactType: Fact + InputFact<T> + marshal::Marshal>(&mut self, fact: FactType) {
-        let name = Fact::fact_name(PhantomData::<FactType>);
+    pub fn add_fact<FactType>(&mut self, fact: FactType)
+    where
+        PhantomData<FactType>: Fact<P>,
+        <PhantomData<FactType> as Fact<P>>::DIRECTION: IsInput,
+        FactType: marshal::Marshal,
+    {
+        let name = <PhantomData<FactType> as Fact<P>>::FACT_NAME;
+        let column_count = <PhantomData<FactType> as Fact<P>>::COLUMN_COUNT;
         let fact_type_idx = self.prog.encode_string(name).0;
 
         // TODO can we avoid a heap allocation here?
-        let mut vec: Vec<u32> =
-            Vec::with_capacity(Fact::column_count(PhantomData::<FactType>) as usize);
+        let mut vec: Vec<u32> = Vec::with_capacity(column_count as usize);
         let buf_ptr = vec.as_mut_ptr();
         let mut cursor = marshal::WriteCursor::new(&mut self.prog, buf_ptr);
         fact.serialize(&mut cursor);
         self.prog.add_fact(fact_type_idx, buf_ptr);
     }
 
-    pub fn add_facts<
-        FactType: Fact + InputFact<T> + marshal::Marshal,
+    pub fn add_facts<FactType, Iter>(&mut self, facts: Iter)
+    where
         Iter: ExactSizeIterator<Item = FactType>,
-    >(
-        &mut self,
-        facts: Iter,
-    ) {
-        let name = Fact::fact_name(PhantomData::<FactType>);
+        FactType: marshal::Marshal,
+        PhantomData<FactType>: Fact<P>,
+        <PhantomData<FactType> as Fact<P>>::DIRECTION: IsInput,
+    {
+        let name = <PhantomData<FactType> as Fact<P>>::FACT_NAME;
         let fact_type_idx = self.prog.encode_string(name).0;
         let fact_count = facts.len();
-        let column_count = Fact::column_count(PhantomData::<FactType>) as usize;
+        let column_count = <PhantomData<FactType> as Fact<P>>::COLUMN_COUNT as usize;
         let vec_size = fact_count * column_count;
 
         let mut vec: Vec<u32> = Vec::with_capacity(vec_size);
@@ -125,4 +133,34 @@ impl<'a, T: marshal::Marshal> ExactSizeIterator for ReadBufferIterator<'a, T> {
     fn len(&self) -> usize {
         self.count
     }
+}
+
+// Some type level programming to avoid misuse of facts
+pub trait Direction: sealed::Direction {}
+impl Direction for Input {}
+impl Direction for Output {}
+impl Direction for InputOutput {}
+
+pub trait IsInput: sealed::IsInput {}
+impl IsInput for Input {}
+impl IsInput for InputOutput {}
+
+pub trait IsOutput: sealed::IsOutput {}
+impl IsOutput for Output {}
+impl IsOutput for InputOutput {}
+
+mod sealed {
+    // Sealed traits so no external code can derive extra implementations
+    pub trait Direction {}
+    impl Direction for super::Input {}
+    impl Direction for super::Output {}
+    impl Direction for super::InputOutput {}
+
+    pub trait IsInput {}
+    impl IsInput for super::Input {}
+    impl IsInput for super::InputOutput {}
+
+    pub trait IsOutput {}
+    impl IsOutput for super::Output {}
+    impl IsOutput for super::InputOutput {}
 }
