@@ -5,7 +5,7 @@ High level Rust bindings for interoperability with
 
 The code consists of two crates:
 
-- `eclair_bindings`: Wraps an idiomatic Rust interface around the low level
+- `eclair_bindings`: wraps an idiomatic Rust interface around the low level
   Eclair API.
 - `eclair_bindings_derive`: provides a proc macro that generates the bindings
   boilerplate for you (highly recommended).
