@@ -27,7 +27,7 @@ struct Edge(u32, u32);
 #[fact(program = Path, direction = output, name = "reachable")]
 struct Reachable {
     start: u32,
-    end: String,
+    end: u32,
 }
 
 fn main() {
