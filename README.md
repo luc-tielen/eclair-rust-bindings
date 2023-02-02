@@ -31,11 +31,11 @@ struct Reachable {
 }
 
 fn main() {
-    let eclair = Program::new(Path);
+    let mut eclair = Program::new(Path);
 
     let edges = vec![Edge(1, 2), Edge(2, 3)];
 
-    eclair.add_facts(edges.iter());
+    eclair.add_facts(edges.into_iter());
     eclair.add_fact(Edge(3, 4));
     eclair.run();
 
