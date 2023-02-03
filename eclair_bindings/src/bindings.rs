@@ -14,6 +14,8 @@ pub struct EclairString {
 // NOTE: all the returned pointers are managed by the Eclair runtime!
 // Rust only needs to make sure it calls eclair_program_destroy / eclair_free_buffer
 // (using the Drop trait).
+// TODO figure out a way to defer specifying this linking target, now it's fixed to a single libeclair.a
+#[link(name = "eclair")]
 extern "C" {
     pub fn eclair_program_init() -> *mut Program;
     pub fn eclair_program_destroy(program: *mut Program);
