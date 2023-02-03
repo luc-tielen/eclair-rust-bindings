@@ -13,6 +13,9 @@ categories = ["development-tools::procedural-macro-helpers"]
 [lib]
 proc-macro = true
 
+[build-dependencies]
+cc = "1.0.79"
+
 [dependencies]
 proc-macro2 = "1.0.50"
 quote = "1.0.23"
