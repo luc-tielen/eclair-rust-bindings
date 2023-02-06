@@ -82,10 +82,10 @@ fn test_fact_with_unnamed_fields() {
 #[test]
 fn test_end_to_end() {
     struct Path;
-    #[fact(program = Path, direction = input, name = "edge")]
+    #[fact(program = Path, direction = input)]
     struct Edge(u32, u32);
     #[derive(Debug, PartialEq, Eq)]
-    #[fact(program = Path, direction = output, name = "reachable")]
+    #[fact(program = Path, direction = output)]
     struct Reachable(u32, u32);
 
     let mut eclair = Program::new(Path);

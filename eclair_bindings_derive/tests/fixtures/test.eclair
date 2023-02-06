@@ -1,12 +1,12 @@
 @def x1(u32, string) input output.
 @def x2(u32, string) input output.
 
-@def edge(u32, u32) input.
-@def reachable(u32, u32) output.
+@def Edge(u32, u32) input.
+@def Reachable(u32, u32) output.
 
-reachable(x, y) :-
-  edge(x, y).
+Reachable(x, y) :-
+  Edge(x, y).
 
-reachable(x, y) :-
-  edge(x, z),
-  reachable(z, y).
+Reachable(x, y) :-
+  Edge(x, z),
+  Reachable(z, y).
